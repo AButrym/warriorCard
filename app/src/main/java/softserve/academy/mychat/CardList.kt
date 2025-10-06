@@ -1,6 +1,8 @@
 package softserve.academy.mychat
 
 import android.content.Context
+import android.util.Log
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,25 +14,32 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material3.Card
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
 
@@ -55,40 +64,152 @@ fun readData(context: Context): List<String> {
     }
 }
 
-@Composable
-fun CardList() {
-    val context = LocalContext.current
-    val itemList = remember {
-        mutableStateListOf(
-            *readData(context).toTypedArray()
-        )
+class CardListViewModel : ViewModel() {
+    private val _itemList = mutableStateListOf("Item 1", "Item 2")
+    val itemList = _itemList // TODO expose as immutable State
+
+    var isConfirmDialogOpen by mutableStateOf(false)
+        private set
+    var itemToBeDeleted by mutableIntStateOf(-1)
+        private set
+
+    val itemToBeDeletedText: String
+        get() = _itemList[itemToBeDeleted]
+
+    fun delete(ix: Int) {
+        itemToBeDeleted = ix
+        isConfirmDialogOpen = true
     }
 
-    @Composable
-    fun updateData() {
-        writeData(itemList, context)
-    }
-    updateData()
+    fun deleteSelected(confirmed: Boolean) {
+        when {
+            !confirmed -> itemToBeDeleted = -1
+            itemToBeDeleted !in _itemList.indices ->
+                Log.wtf("CardList", "deleteSelected is invoked while itemToBeDeleted is -1")
 
-    fun deleteAt(ix: Int) {
-        itemList.removeAt(ix)
+            else -> run {
+                _itemList.removeAt(itemToBeDeleted)
+                itemToBeDeleted = -1
+            }
+        }
+        isConfirmDialogOpen = false
     }
 
     fun add(text: String) {
-        itemList.add(text)
+        _itemList.add(text)
     }
+}
 
-    LazyColumn {
-        item {
-            AddCardItem(::add)
+@Composable
+fun CardList(
+    vm: CardListViewModel = viewModel()
+) {
+//    val context = LocalContext.current
+//    val itemList = rememberSaveable {
+//        mutableStateListOf(
+//            *readData(context).toTypedArray()
+//        )
+//    }
+//    var isConfirmDialogOpen by rememberSaveable {
+//        mutableStateOf(false)
+//    }
+//    var itemToBeDeleted by rememberSaveable { mutableIntStateOf(-1) }
+
+//    LaunchedEffect(itemList.size) {
+//        writeData(itemList, context)
+//    }
+
+//    fun deleteAt(ix: Int) {
+//        itemList.removeAt(ix)
+//    }
+//
+//    fun deleteSelected(confirmed: Boolean) {
+//        when {
+//            !confirmed -> itemToBeDeleted = -1
+//            itemToBeDeleted !in itemList.indices ->
+//                Log.wtf("CardList", "deleteSelected is invoked while itemToBeDeleted is -1")
+//            else -> run {
+//                itemList.removeAt(itemToBeDeleted)
+//                itemToBeDeleted = -1
+//            }
+//        }
+//        isConfirmDialogOpen = false
+//    }
+//
+//    fun add(text: String) {
+//        itemList.add(text)
+//    }
+
+    Box(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        LazyColumn(
+            modifier = Modifier.align(Alignment.Center)
+        ) {
+            item {
+                AddCardItem(vm::add)
+            }
+            items(count = vm.itemList.size) { index ->
+                CardListItem(
+                    text = vm.itemList[index],
+                    onDelete = { vm.delete(index) }
+                )
+            }
         }
-        items(count = itemList.size) { index ->
-            CardListItem(
-                text = itemList[index],
-                onDelete = { deleteAt(index) }
+
+        if (vm.isConfirmDialogOpen) {
+            ConfirmDialog(
+                itemText = vm.itemToBeDeletedText,
+                callback = vm::deleteSelected,
+                modifier = Modifier.align(Alignment.Center)
             )
         }
     }
+}
+
+@Composable
+fun ConfirmDialog(
+    itemText: String,
+    callback: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    AlertDialog(
+        modifier = modifier,
+        icon = {
+            Icon(
+                Icons.Filled.Warning,
+                contentDescription = null,
+                tint = Color.Red
+            )
+        },
+        title = {
+            Text(text = "Are you sure to delete this item?")
+        },
+        text = {
+            Text(text = itemText)
+        },
+        onDismissRequest = {
+            callback(false)
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    callback(true)
+                }
+            ) {
+                Text("Confirm")
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = {
+                    callback(false)
+                }
+            ) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 @Composable
