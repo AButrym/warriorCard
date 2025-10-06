@@ -66,7 +66,7 @@ fun readData(context: Context): List<String> {
 
 class CardListViewModel : ViewModel() {
     private val _itemList = mutableStateListOf("Item 1", "Item 2")
-    val itemList = _itemList // TODO expose as immutable State
+    val itemList: List<String> get() = _itemList
 
     var isConfirmDialogOpen by mutableStateOf(false)
         private set
