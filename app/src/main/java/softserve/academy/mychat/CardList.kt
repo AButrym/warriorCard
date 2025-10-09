@@ -29,13 +29,10 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
@@ -59,7 +56,7 @@ fun readData(context: Context): List<String> {
         @Suppress("UNCHECKED_CAST")
         return ObjectInputStream(context.openFileInput(FILE_NAME))
             .readObject() as ArrayList<String>
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         return emptyList()
     }
 }
@@ -104,48 +101,8 @@ class CardListViewModel : ViewModel() {
 fun CardList(
     vm: CardListViewModel = viewModel()
 ) {
-//    val context = LocalContext.current
-//    val itemList = rememberSaveable {
-//        mutableStateListOf(
-//            *readData(context).toTypedArray()
-//        )
-//    }
-//    var isConfirmDialogOpen by rememberSaveable {
-//        mutableStateOf(false)
-//    }
-//    var itemToBeDeleted by rememberSaveable { mutableIntStateOf(-1) }
-
-//    LaunchedEffect(itemList.size) {
-//        writeData(itemList, context)
-//    }
-
-//    fun deleteAt(ix: Int) {
-//        itemList.removeAt(ix)
-//    }
-//
-//    fun deleteSelected(confirmed: Boolean) {
-//        when {
-//            !confirmed -> itemToBeDeleted = -1
-//            itemToBeDeleted !in itemList.indices ->
-//                Log.wtf("CardList", "deleteSelected is invoked while itemToBeDeleted is -1")
-//            else -> run {
-//                itemList.removeAt(itemToBeDeleted)
-//                itemToBeDeleted = -1
-//            }
-//        }
-//        isConfirmDialogOpen = false
-//    }
-//
-//    fun add(text: String) {
-//        itemList.add(text)
-//    }
-
-    Box(
-        modifier = Modifier.fillMaxSize()
-    ) {
-        LazyColumn(
-            modifier = Modifier.align(Alignment.Center)
-        ) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(modifier = Modifier.align(Alignment.Center)) {
             item {
                 AddCardItem(vm::add)
             }
@@ -182,30 +139,18 @@ fun ConfirmDialog(
                 tint = Color.Red
             )
         },
-        title = {
-            Text(text = "Are you sure to delete this item?")
-        },
-        text = {
-            Text(text = itemText)
-        },
+        title = { Text(text = "Are you sure to delete this item?") },
+        text = { Text(text = itemText) },
         onDismissRequest = {
             callback(false)
         },
         confirmButton = {
-            TextButton(
-                onClick = {
-                    callback(true)
-                }
-            ) {
+            TextButton(onClick = { callback(true) }) {
                 Text("Confirm")
             }
         },
         dismissButton = {
-            TextButton(
-                onClick = {
-                    callback(false)
-                }
-            ) {
+            TextButton(onClick = { callback(false) }) {
                 Text("Cancel")
             }
         }
@@ -226,15 +171,15 @@ fun AddCardItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(4.dp)
+                .padding(4.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             TextField(
                 value = text,
                 onValueChange = { text = it }
             )
-            Spacer(
-                modifier = Modifier.weight(1f)
-            )
+            Spacer(Modifier.weight(1f))
+
             IconButton(
                 onClick = { onCreate(text).also { text = "" } }
             ) {
@@ -263,19 +208,18 @@ fun CardListItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(4.dp)
+                .padding(4.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = text,
                 modifier = Modifier
                     .width(300.dp)
+                    .padding(start = 8.dp)
             )
-            Spacer(
-                modifier = Modifier.weight(1f)
-            )
-            IconButton(
-                onClick = onDelete
-            ) {
+            Spacer(Modifier.weight(1f))
+
+            IconButton(onClick = onDelete) {
                 Icon(
                     Icons.Filled.Delete,
                     contentDescription = "delete",
