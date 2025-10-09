@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
@@ -29,6 +30,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,7 +42,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
 
-const val FILE_NAME = "cardlist.dat"
+const val FILE_NAME = "cardList.dat"
 
 fun writeData(items: List<String>, context: Context) {
     context.openFileOutput(FILE_NAME, Context.MODE_PRIVATE).use {
@@ -73,9 +75,29 @@ class CardListViewModel : ViewModel() {
     val itemToBeDeletedText: String
         get() = _itemList[itemToBeDeleted]
 
+    var isEditDialogOpen by mutableStateOf(false)
+        private set
+    var itemBeingEdited by mutableIntStateOf(-1)
+        private set
+    val itemBeingEditedText: String
+        get() = _itemList[itemBeingEdited]
+
     fun delete(ix: Int) {
         itemToBeDeleted = ix
         isConfirmDialogOpen = true
+    }
+
+    fun edit(ix: Int) {
+        itemBeingEdited = ix
+        isEditDialogOpen = true
+    }
+
+    fun editSelected(editedText: String?) {
+        if (editedText != null) {
+            _itemList[itemBeingEdited] = editedText
+        }
+        itemBeingEdited = -1
+        isEditDialogOpen = false
     }
 
     fun deleteSelected(confirmed: Boolean) {
@@ -109,7 +131,8 @@ fun CardList(
             items(count = vm.itemList.size) { index ->
                 CardListItem(
                     text = vm.itemList[index],
-                    onDelete = { vm.delete(index) }
+                    onDelete = { vm.delete(index) },
+                    onEdit = { vm.edit(index) }
                 )
             }
         }
@@ -118,6 +141,14 @@ fun CardList(
             ConfirmDialog(
                 itemText = vm.itemToBeDeletedText,
                 callback = vm::deleteSelected,
+                modifier = Modifier.align(Alignment.Center)
+            )
+        }
+
+        if (vm.isEditDialogOpen) {
+            EditDialog(
+                itemText = vm.itemBeingEditedText,
+                callback = vm::editSelected,
                 modifier = Modifier.align(Alignment.Center)
             )
         }
@@ -151,6 +182,46 @@ fun ConfirmDialog(
         },
         dismissButton = {
             TextButton(onClick = { callback(false) }) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+fun EditDialog(
+    itemText: String,
+    callback: (String?) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var text by rememberSaveable { mutableStateOf(itemText) }
+
+    AlertDialog(
+        modifier = modifier,
+        icon = {
+            Icon(
+                Icons.Filled.Edit,
+                contentDescription = null,
+                tint = Color.Blue
+            )
+        },
+        title = { Text(text = "You are editing an item with initial text:'$itemText'?") },
+        text = {
+            TextField(
+                value = text,
+                onValueChange = { text = it }
+            )
+        },
+        onDismissRequest = {
+            callback(null)
+        },
+        confirmButton = {
+            TextButton(onClick = { callback(text).also { text = "" } }) {
+                Text("Submit")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = { callback(null) }) {
                 Text("Cancel")
             }
         }
@@ -197,13 +268,13 @@ fun AddCardItem(
 @Composable
 fun CardListItem(
     text: String,
-    onDelete: () -> Unit = {}
+    onDelete: () -> Unit = {},
+    onEdit: () -> Unit = {}
 ) {
     OutlinedCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 2.dp)
-
     ) {
         Row(
             modifier = Modifier
@@ -217,13 +288,24 @@ fun CardListItem(
                     .width(300.dp)
                     .padding(start = 8.dp)
             )
+
             Spacer(Modifier.weight(1f))
+
+            IconButton(onClick = onEdit) {
+                Icon(
+                    Icons.Filled.Edit,
+                    contentDescription = "edit",
+                    tint = Color.Blue
+                )
+            }
+
+            Spacer(Modifier.width(8.dp))
 
             IconButton(onClick = onDelete) {
                 Icon(
                     Icons.Filled.Delete,
                     contentDescription = "delete",
-                    tint = Color.Black
+                    tint = Color.Red
                 )
             }
         }
