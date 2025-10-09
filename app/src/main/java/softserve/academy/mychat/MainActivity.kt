@@ -44,20 +44,24 @@ import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import dagger.hilt.android.AndroidEntryPoint
 import softserve.academy.mychat.ui.theme.AppTheme
+import androidx.hilt.navigation.compose.hiltViewModel
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
+            val vm: CardListViewModel = hiltViewModel()
             AppTheme {
                 Surface(
                     modifier = Modifier
                         .fillMaxSize()
                         .wrapContentSize(align = Alignment.Center)
                 ) {
-
+                    CardList(vm)
                 }
             }
         }

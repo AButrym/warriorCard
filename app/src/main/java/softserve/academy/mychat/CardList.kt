@@ -1,6 +1,5 @@
 package softserve.academy.mychat
 
-import android.content.Context
 import android.util.Log
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -39,6 +38,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
+import dagger.hilt.android.lifecycle.HiltViewModel
 import softserve.academy.mychat.CardListEvent.Add
 import softserve.academy.mychat.CardListEvent.CancelDelete
 import softserve.academy.mychat.CardListEvent.CancelEdit
@@ -46,29 +46,8 @@ import softserve.academy.mychat.CardListEvent.ConfirmDelete
 import softserve.academy.mychat.CardListEvent.OpenDeleteConfirmationDialog
 import softserve.academy.mychat.CardListEvent.OpenEditDialog
 import softserve.academy.mychat.CardListEvent.SubmitEdit
-import java.io.ObjectInputStream
-import java.io.ObjectOutputStream
+import javax.inject.Inject
 
-const val FILE_NAME = "cardList.dat"
-
-fun writeData(items: List<String>, context: Context) {
-    context.openFileOutput(FILE_NAME, Context.MODE_PRIVATE).use {
-        val oos = ObjectOutputStream(it)
-        oos.writeObject(
-            ArrayList<String>(items)
-        )
-    }
-}
-
-fun readData(context: Context): List<String> {
-    try {
-        @Suppress("UNCHECKED_CAST")
-        return ObjectInputStream(context.openFileInput(FILE_NAME))
-            .readObject() as ArrayList<String>
-    } catch (_: Exception) {
-        return emptyList()
-    }
-}
 
 typealias Callback = (CardListEvent) -> Unit
 
@@ -82,8 +61,13 @@ sealed interface CardListEvent {
     data class Add(val text: String) : CardListEvent
 }
 
-class CardListViewModel : ViewModel() {
-    private val _itemList = mutableStateListOf("Item 1", "Item 2")
+@HiltViewModel
+class CardListViewModel @Inject constructor(
+    private val storageService: StorageService
+) : ViewModel() {
+    private val _itemList = mutableStateListOf(
+        *storageService.read().toTypedArray()
+    )
     val itemList: List<String> get() = _itemList
 
     var isConfirmDialogOpen by mutableStateOf(false)
@@ -124,6 +108,7 @@ class CardListViewModel : ViewModel() {
     fun editSelected(editedText: String?) {
         if (editedText != null) {
             _itemList[itemBeingEdited] = editedText
+            storageService.write(_itemList)
         }
         itemBeingEdited = -1
         isEditDialogOpen = false
@@ -138,6 +123,7 @@ class CardListViewModel : ViewModel() {
             else -> run {
                 _itemList.removeAt(itemToBeDeleted)
                 itemToBeDeleted = -1
+                storageService.write(_itemList)
             }
         }
         isConfirmDialogOpen = false
@@ -145,12 +131,13 @@ class CardListViewModel : ViewModel() {
 
     fun add(text: String) {
         _itemList.add(text)
+        storageService.write(_itemList)
     }
 }
 
 @Composable
 fun CardList(
-    vm: CardListViewModel = viewModel()
+    vm: CardListViewModel
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(modifier = Modifier.align(Alignment.Center)) {
@@ -350,14 +337,14 @@ fun CardListItemPreview() {
     CardListItem("Warrior #1", 0)
 }
 
-@Preview
-@Composable
-fun CardListPreview() {
-    Surface(
-        modifier = Modifier
-            .fillMaxSize()
-            .wrapContentSize(Alignment.Center)
-    ) {
-        CardList()
-    }
-}
+//@Preview
+//@Composable
+//fun CardListPreview() {
+//    Surface(
+//        modifier = Modifier
+//            .fillMaxSize()
+//            .wrapContentSize(Alignment.Center)
+//    ) {
+//        CardList()
+//    }
+//}
