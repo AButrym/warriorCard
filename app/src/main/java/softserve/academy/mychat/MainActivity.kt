@@ -44,6 +44,7 @@ import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import org.koin.androidx.compose.koinViewModel
 import softserve.academy.mychat.ui.theme.AppTheme
 
 class MainActivity : ComponentActivity() {
@@ -57,7 +58,7 @@ class MainActivity : ComponentActivity() {
                         .fillMaxSize()
                         .wrapContentSize(align = Alignment.Center)
                 ) {
-
+                    CardList()
                 }
             }
         }
